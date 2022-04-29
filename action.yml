@@ -1,0 +1,14 @@
+name: 'Version Bump'
+description: 'Will bump'
+
+outputs:
+  tag: # tag of output
+    description: 'The tag name to be created'
+  release_name: # release_name of output
+    description: 'What the release should be'
+  body: # body of output
+    description: 'What should be put on the release'
+  
+runs:
+  using: 'node16'
+  main: 'index.js'
