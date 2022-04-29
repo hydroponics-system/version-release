@@ -2,9 +2,9 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 
 const githubToken = core.getInput("github_token");
-const octokit = github.getOctokit("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");
-let owner = "hydroponics-system";
-let repo = "hydro-microservice";
+const octokit = github.getOctokit(githubToken);
+let owner = "";
+let repo = "";
 
 let CURRENT_VERSION = { major: 0, minor: 0, fix: 0 };
 let NEW_VERSION = { major: 0, minor: 0, fix: 0 };
