@@ -15,6 +15,7 @@ getLatestTag();
 getLatestCommitMessage();
 
 try {
+  console.log("Setting outputs...");
   core.setOutput(
     "tag",
     `v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
@@ -69,6 +70,11 @@ async function getLatestCommitMessage() {
   } else {
     NEW_VERSION.fix = NEW_VERSION.fix + 1;
   }
+
+  console.log(
+    "New Version Bump: " +
+      `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
+  );
 
   let bodyMesage = "New Release";
   if (result) {
