@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package": "ncc build index.js --license licenses.txt"
+    "package": "ncc build index.js --license LICENSE.md"
   },
   "keywords": [],
   "author": "",
