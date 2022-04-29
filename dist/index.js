@@ -8771,22 +8771,26 @@ let CURRENT_VERSION = { major: 0, minor: 0, fix: 0 };
 let NEW_VERSION = { major: 0, minor: 0, fix: 0 };
 let RELEASE_DATA = "New Release";
 
-setup();
-getLatestTag();
-getLatestCommitMessage();
-
-try {
-  core.setOutput(
-    "tag",
-    `v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
-  );
-  core.setOutput(
-    "release_name",
-    `Release v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
-  );
-  core.setOutput("body", RELEASE_DATA);
-} catch (error) {
-  core.setFailed(error.message);
+async function run() {
+  setup();
+  getLatestTag().then(() => {
+    getLatestCommitMessage().then(() => {
+      try {
+        console.log("Setting outputs...");
+        core.setOutput(
+          "tag",
+          `v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
+        );
+        core.setOutput(
+          "release_name",
+          `Release v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
+        );
+        core.setOutput("body", RELEASE_DATA);
+      } catch (error) {
+        core.setFailed(error.message);
+      }
+    });
+  });
 }
 
 function setup() {
@@ -8794,11 +8798,12 @@ function setup() {
     owner = github.context.repo.owner;
     repo = github.context.repo.repo;
   } catch (error) {
-    core.setFailed("Could not get owner or repo name");
+    // core.setFailed("Could not get owner or repo name");
   }
 }
 
 async function getLatestTag() {
+  console.log("Getting latest tags...");
   const tags = await octokit.request("GET /repos/{owner}/{repo}/tags", {
     owner: owner,
     repo: repo,
@@ -8811,9 +8816,15 @@ async function getLatestTag() {
   CURRENT_VERSION.fix = parseInt(result[3]);
 
   NEW_VERSION = { ...CURRENT_VERSION };
+  console.log(
+    "Latest tag found: " +
+      `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}` +
+      "\n"
+  );
 }
 
 async function getLatestCommitMessage() {
+  console.log("Getting last commit message...");
   const commits = await octokit.request("GET /repos/{owner}/{repo}/commits", {
     owner: owner,
     repo: repo,
@@ -8822,18 +8833,27 @@ async function getLatestCommitMessage() {
   const regexEx = new RegExp("<(.*?)>(:.*)");
   const result = regexEx.exec(commits.data[0].commit.message);
 
-  const bumpType = result ? result[0] : "patch";
+  const bumpType = result ? result[1] : "patch";
   if (bumpType === "major") {
     NEW_VERSION.major = NEW_VERSION.major + 1;
+    NEW_VERSION.minor = 0;
+    NEW_VERSION.fix = 0;
   } else if (bumpType === "minor") {
     NEW_VERSION.minor = NEW_VERSION.minor + 1;
+    NEW_VERSION.fix = 0;
   } else {
     NEW_VERSION.fix = NEW_VERSION.fix + 1;
   }
 
+  console.log(
+    "New Version Bump: " +
+      `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}` +
+      "\n"
+  );
+
   let bodyMesage = "New Release";
   if (result) {
-    bodyMesage = result[1];
+    bodyMesage = result[2].replace(": ", "");
   }
 
   buildReleaseBody(
@@ -8851,8 +8871,10 @@ function buildReleaseBody(currentVersion, newVersion, body) {
 
   today = yyyy + "-" + mm + "-" + dd;
   RELEASE_DATA = `### [${newVersion}](https://github.com/hydroponics-system/hydro-microservice/compare/${currentVersion}...${newVersion}) (${today})\n### **Changes**\n* ${body}`;
-  console.log(RELEASE_DATA);
+  console.log("Content: \n" + RELEASE_DATA + "\n");
 }
+
+run();
 
 })();
 
