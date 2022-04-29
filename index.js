@@ -70,7 +70,7 @@ async function getLatestCommitMessage() {
   });
 
   const regexEx = new RegExp("<(.*?)>(:.*)");
-  const result = regexEx.exec(commits.data[0].commit.message);
+  let result = regexEx.exec(commits.data[0].commit.message);
 
   const bumpType = result ? result[1] : "patch";
   if (bumpType === "major") {
@@ -93,6 +93,12 @@ async function getLatestCommitMessage() {
   let bodyMesage = "New Release";
   if (result) {
     bodyMesage = result[2].replace(": ", "");
+  } else {
+    const regexEx = new RegExp("(:.*)");
+    result = regexEx.exec(commits.data[0].commit.message);
+    bodyMesage = result
+      ? result[0].replace(":", "").trim()
+      : commits.data[0].commit.message;
   }
 
   buildReleaseBody(
