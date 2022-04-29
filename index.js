@@ -109,7 +109,7 @@ function buildReleaseBody(currentVersion, newVersion, body) {
   var yyyy = today.getFullYear();
 
   today = yyyy + "-" + mm + "-" + dd;
-  RELEASE_DATA = `### [${newVersion}](https://github.com/hydroponics-system/hydro-microservice/compare/${currentVersion}...${newVersion}) (${today})\n### **Changes**\n* ${body}`;
+  RELEASE_DATA = `### [${newVersion}](https://github.com/hydroponics-system/hydro-microservice/compare/v${currentVersion}...v${newVersion}) (${today})\n### **Changes**\n* ${body}`;
   console.log("Content: \n" + RELEASE_DATA + "\n");
 }
 
