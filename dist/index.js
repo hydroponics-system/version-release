@@ -33,11 +33,12 @@ const rxjs_1 = __nccwpck_require__(5805);
 const operators_1 = __nccwpck_require__(7801);
 const promise_converter_service_1 = __nccwpck_require__(3017);
 const githubToken = core.getInput('github_token');
-const octokit = github.getOctokit('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');
-let owner = 'hydroponics-system';
-let repo = 'hydro-microservice';
+const octokit = github.getOctokit(githubToken);
+let owner = '';
+let repo = '';
 let BUMP_TYPE = 'patch';
 function startRelease() {
+    setup();
     return (0, rxjs_1.combineLatest)([getLatestTag(), getLatestCommit()]).pipe((0, operators_1.switchMap)(([v, c]) => bumpVersion(v, c)), (0, operators_1.switchMap)(res => buildRelease(res)));
 }
 exports.startRelease = startRelease;

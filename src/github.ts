@@ -6,12 +6,13 @@ import {Release, Version} from './domain/model'
 import {convertPromise} from './service/promise-converter.service'
 
 const githubToken = core.getInput('github_token')
-const octokit = github.getOctokit('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')
-let owner = 'hydroponics-system'
-let repo = 'hydro-microservice'
+const octokit = github.getOctokit(githubToken)
+let owner = ''
+let repo = ''
 let BUMP_TYPE = 'patch'
 
 export function startRelease() {
+  setup()
   return combineLatest([getLatestTag(), getLatestCommit()]).pipe(
     switchMap(([v, c]) => bumpVersion(v, c)),
     switchMap(res => buildRelease(res))
