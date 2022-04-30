@@ -1,6 +1,10 @@
 name: 'Version Bump'
-description: 'Will bump'
-
+description: 'Will bump current version'
+author: 'Hydroponics'
+inputs:
+  github_token: # The github token
+    required: true
+    description: 'The users github token'
 outputs:
   tag: # tag of output
     description: 'The tag name to be created'
@@ -8,7 +12,6 @@ outputs:
     description: 'What the release should be'
   body: # body of output
     description: 'What should be put on the release'
-  
 runs:
   using: 'node16'
   main: 'dist/index.js'
