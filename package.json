@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package": "ncc build index.js --license LICENSE.md"
+    "package": "ncc build index.js --license LICENSE.md",
+    "action": "node index.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Hydroponics",
+  "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.7.0",
     "@actions/github": "^5.0.1"

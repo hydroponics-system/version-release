@@ -15,15 +15,10 @@ async function run() {
   getLatestTag().then(() => {
     getLatestCommitMessage().then(() => {
       try {
+        const version = buildVersionString(NEW_VERSION);
         console.log("Setting outputs...");
-        core.setOutput(
-          "tag",
-          `v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
-        );
-        core.setOutput(
-          "release_name",
-          `Release v${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`
-        );
+        core.setOutput("tag", `v${version}`);
+        core.setOutput("release_name", `Release v${version}`);
         core.setOutput("body", RELEASE_DATA);
       } catch (error) {
         core.setFailed(error.message);
@@ -47,19 +42,18 @@ async function getLatestTag() {
     owner: owner,
     repo: repo,
   });
+
   const regexEx = new RegExp("^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
   const result = regexEx.exec(tags.data[0].name);
 
-  CURRENT_VERSION.major = parseInt(result[1]);
-  CURRENT_VERSION.minor = parseInt(result[2]);
-  CURRENT_VERSION.fix = parseInt(result[3]);
-
+  CURRENT_VERSION = {
+    major: parseInt(result[1]),
+    minor: parseInt(result[2]),
+    fix: parseInt(result[3]),
+  };
   NEW_VERSION = { ...CURRENT_VERSION };
-  console.log(
-    "Latest tag found: " +
-      `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}` +
-      "\n"
-  );
+
+  console.log(`Latest tag found: 'v${buildVersionString(CURRENT_VERSION)}'\n`);
 }
 
 async function getLatestCommitMessage() {
@@ -84,10 +78,9 @@ async function getLatestCommitMessage() {
     NEW_VERSION.fix = NEW_VERSION.fix + 1;
   }
 
+  console.log(`Commit message found: '${commits.data[0].commit.message}'`);
   console.log(
-    "New Version Bump: " +
-      `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}` +
-      "\n"
+    `New Version Bump: ${bumpType} -> 'v${buildVersionString(NEW_VERSION)}'\n`
   );
 
   let bodyMesage = "New Release";
@@ -102,8 +95,8 @@ async function getLatestCommitMessage() {
   }
 
   buildReleaseBody(
-    `${CURRENT_VERSION.major}.${CURRENT_VERSION.minor}.${CURRENT_VERSION.fix}`,
-    `${NEW_VERSION.major}.${NEW_VERSION.minor}.${NEW_VERSION.fix}`,
+    buildVersionString(CURRENT_VERSION),
+    buildVersionString(NEW_VERSION),
     bodyMesage
   );
 }
@@ -117,6 +110,10 @@ function buildReleaseBody(currentVersion, newVersion, body) {
   today = yyyy + "-" + mm + "-" + dd;
   RELEASE_DATA = `### [${newVersion}](https://github.com/hydroponics-system/hydro-microservice/compare/v${currentVersion}...v${newVersion}) (${today})\n### **Changes**\n* ${body}`;
   console.log("Content: \n" + RELEASE_DATA + "\n");
+}
+
+function buildVersionString(version) {
+  return `${version.major}.${version.minor}.${version.fix}`;
 }
 
 run();
