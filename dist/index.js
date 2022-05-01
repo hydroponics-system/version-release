@@ -26,173 +26,167 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getLatestTag = exports.startRelease = void 0;
+exports.GitHubService = void 0;
 const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
 const rxjs_1 = __nccwpck_require__(5805);
 const operators_1 = __nccwpck_require__(7801);
-const promise_converter_service_1 = __nccwpck_require__(3017);
-const githubToken = core.getInput('github_token');
-const octokit = github.getOctokit(githubToken);
-let owner = '';
-let repo = '';
-let BUMP_TYPE = 'patch';
-function startRelease() {
-    setup();
-    return (0, rxjs_1.combineLatest)([getLatestTag(), getLatestCommit()]).pipe((0, operators_1.switchMap)(([v, c]) => bumpVersion(v, c)), (0, operators_1.switchMap)(res => buildRelease(res)));
-}
-exports.startRelease = startRelease;
+const environment_service_1 = __nccwpck_require__(9379);
+const request_service_1 = __nccwpck_require__(9450);
 /**
- * This will setup the owner and repository name to be used
- * when getting the tags and commit messages.
- */
-function setup() {
-    try {
-        owner = github.context.repo.owner;
-        repo = github.context.repo.repo;
-    }
-    catch (error) {
-        core.setFailed('Could not get owner or repo name');
-    }
-}
-/**
- * Async function to get all the tags from the repository.
+ * Github service for handling all functionality with github actions.
  *
- * @returns an {@link Observable} of type {@link Version}
+ * @author Sam Butler
+ * @since May 1, 2022
  */
-function getLatestTag() {
-    console.log('Getting latest tags...');
-    return (0, promise_converter_service_1.convertPromise)(octokit.request('GET /repos/{owner}/{repo}/tags', {
-        owner: owner,
-        repo: repo
-    })).pipe((0, operators_1.switchMap)(res => parseTagsToLatest(res)));
-}
-exports.getLatestTag = getLatestTag;
-/**
- * This will parse the tags and get the latest tag that is on the
- * repo. It will than format that into a {@link Version} object
- * to be used for creating the release and body.
- *
- * @param tags The list of tags to parse.
- * @returns an {@link Observable} of the latest {@link Version}
- */
-function parseTagsToLatest(tags) {
-    const regexEx = new RegExp('^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$');
-    const result = regexEx.exec(tags.data[0].name);
-    if (result) {
-        const v = {
-            major: parseInt(result[1]),
-            minor: parseInt(result[2]),
-            fix: parseInt(result[3])
-        };
-        console.log(`Latest tag found: 'v${parseVersion(v)}'\n`);
-        return (0, rxjs_1.of)(v);
+class GitHubService {
+    constructor() {
+        this.requestService = new request_service_1.RequestService();
+        this.environmentService = new environment_service_1.EnvironmentService();
+        this.ACTIVE_ENVIRONMENT = { owner: '', repo: '', token: '' };
+        this.BUMP_TYPE = 'patch';
     }
-    else {
-        return (0, rxjs_1.of)({ major: 0, minor: 0, fix: 0 });
+    startRelease() {
+        this.ACTIVE_ENVIRONMENT = this.environmentService.getActiveEnvironment();
+        return (0, rxjs_1.combineLatest)([this.getLatestTag(), this.getLatestCommit()]).pipe((0, operators_1.switchMap)(([v, c]) => this.bumpVersion(v, c)), (0, operators_1.switchMap)(res => this.buildRelease(res)));
     }
-}
-/**
- * This will get the latest commit message to be used on the release.
- * It will check see what bump version it should do and then it will
- * pull the commit message and attach it to the release notes. If the
- * message can not be determined then it will do a default patch and
- * add a link to the diff from the previous version.
- */
-function getLatestCommit() {
-    console.log('Getting last commit message...');
-    return (0, promise_converter_service_1.convertPromise)(octokit.request('GET /repos/{owner}/{repo}/commits', {
-        owner: owner,
-        repo: repo
-    })).pipe((0, operators_1.switchMap)(res => {
-        console.log(`Latest Commit: ${res.data[0].commit.message}`);
+    /**
+     * Async function to get all the tags from the repository.
+     *
+     * @returns an {@link Observable} of type {@link Version}
+     */
+    getLatestTag() {
+        console.log('Getting latest tags...');
+        return this.requestService
+            .get('/repos/{owner}/{repo}/tags', this.ACTIVE_ENVIRONMENT)
+            .pipe((0, operators_1.switchMap)(res => this.parseTagsToLatest(res)));
+    }
+    /**
+     * This will parse the tags and get the latest tag that is on the
+     * repo. It will than format that into a {@link Version} object
+     * to be used for creating the release and body.
+     *
+     * @param tags The list of tags to parse.
+     * @returns an {@link Observable} of the latest {@link Version}
+     */
+    parseTagsToLatest(tags) {
+        const regexEx = new RegExp('^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$');
+        const result = regexEx.exec(tags.data[0].name);
+        if (result) {
+            const v = {
+                major: parseInt(result[1]),
+                minor: parseInt(result[2]),
+                fix: parseInt(result[3])
+            };
+            console.log(`Latest tag found: 'v${this.parseVersion(v)}'`);
+            return (0, rxjs_1.of)(v);
+        }
+        else {
+            return (0, rxjs_1.of)({ major: 0, minor: 0, fix: 0 });
+        }
+    }
+    /**
+     * This will get the latest commit message to be used on the release.
+     * It will check see what bump version it should do and then it will
+     * pull the commit message and attach it to the release notes. If the
+     * message can not be determined then it will do a default patch and
+     * add a link to the diff from the previous version.
+     */
+    getLatestCommit() {
+        console.log('Getting latest commit message...');
+        return this.requestService
+            .get('/repos/{owner}/{repo}/commits', this.ACTIVE_ENVIRONMENT)
+            .pipe((0, operators_1.switchMap)(res => {
+            console.log(`Latest Commit: '${res.data[0].commit.message}'`);
+            const regexEx = new RegExp('<(.*?)>(:.*)');
+            let result = regexEx.exec(res.data[0].commit.message);
+            this.BUMP_TYPE = result ? result[1] : 'patch';
+            return (0, rxjs_1.of)(res.data[0].commit.message);
+        }));
+    }
+    /**
+     * This will bump the current version that was pulled. If there is
+     * not a bump type on the commit message then it will do a patch
+     * by default.
+     *
+     * @param message The commit message to parse.
+     */
+    bumpVersion(current, commit) {
+        const newVersion = Object.assign({}, current);
+        if (this.BUMP_TYPE === 'major') {
+            newVersion.major = newVersion.major + 1;
+            newVersion.minor = 0;
+            newVersion.fix = 0;
+        }
+        else if (this.BUMP_TYPE === 'minor') {
+            newVersion.minor = newVersion.minor + 1;
+            newVersion.fix = 0;
+        }
+        else {
+            newVersion.fix = newVersion.fix + 1;
+        }
+        console.log(`New Version: ${this.BUMP_TYPE} -> 'v${this.parseVersion(newVersion)}'\n`);
+        core.setOutput('tag', `v${this.parseVersion(newVersion)}`);
+        core.setOutput('release_name', `Release v${this.parseVersion(newVersion)}`);
+        return (0, rxjs_1.of)({ current: current, new: newVersion, commit: commit });
+    }
+    /**
+     * Builds out the release body to be used so it is formatted correctly
+     * for github. It will have a link to compare the new version to the
+     * previous version and also the most recent commit message that was
+     * merged with the new release.
+     *
+     * @param currentVersion The current version on github.
+     * @param newVersion The new version that should be created.
+     * @param body The message to add to the releease.
+     */
+    buildRelease(r) {
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = today.getFullYear();
+        const todayString = yyyy + '-' + mm + '-' + dd;
+        let body = `### [${this.parseVersion(r.new)}]`;
+        body += `(https://github.com/${this.ACTIVE_ENVIRONMENT.owner}/${this.ACTIVE_ENVIRONMENT.repo}/compare/`;
+        body += `v${this.parseVersion(r.current)}...v${this.parseVersion(r.new)})`;
+        body += `(${todayString})\n`;
+        body += `### **Changes**\n* ${this.getCommitBody(r.commit)}`;
+        console.log('Release Content: \n' + body);
+        core.setOutput('body', body);
+        return (0, rxjs_1.of)(null);
+    }
+    /**
+     * This will get the body of the commit. If there is no commit
+     * body then it will just set a default release body.
+     *
+     * @param message The commit message to parse.
+     * @returns The body message to add to to the release notes.
+     */
+    getCommitBody(message) {
         const regexEx = new RegExp('<(.*?)>(:.*)');
-        let result = regexEx.exec(res.data[0].commit.message);
-        BUMP_TYPE = result ? result[1] : 'patch';
-        return (0, rxjs_1.of)(res.data[0].commit.message);
-    }));
-}
-/**
- * This will bump the current version that was pulled. If there is
- * not a bump type on the commit message then it will do a patch
- * by default.
- *
- * @param message The commit message to parse.
- */
-function bumpVersion(current, commit) {
-    const newVersion = Object.assign({}, current);
-    if (BUMP_TYPE === 'major') {
-        newVersion.major = newVersion.major + 1;
-        newVersion.minor = 0;
-        newVersion.fix = 0;
+        let result = regexEx.exec(message);
+        let bodyMesage = 'New Release';
+        if (result) {
+            bodyMesage = result[2].replace(': ', '');
+        }
+        else {
+            const regexEx = new RegExp('(:.*)');
+            result = regexEx.exec(message);
+            bodyMesage = result ? result[0].replace(':', '').trim() : message;
+        }
+        return bodyMesage;
     }
-    else if (BUMP_TYPE === 'minor') {
-        newVersion.minor = newVersion.minor + 1;
-        newVersion.fix = 0;
+    /**
+     * This will take the version and parse it into a readable
+     * and formatted version string.
+     *
+     * @param version The version to format.
+     * @returns The new formatted string.
+     */
+    parseVersion(version) {
+        return `${version.major}.${version.minor}.${version.fix}`;
     }
-    else {
-        newVersion.fix = newVersion.fix + 1;
-    }
-    console.log(`New Version: ${BUMP_TYPE} -> 'v${parseVersion(newVersion)}'\n`);
-    core.setOutput('tag', `v${parseVersion(newVersion)}`);
-    core.setOutput('release_name', `Release v${parseVersion(newVersion)}`);
-    return (0, rxjs_1.of)({ current: current, new: newVersion, commit: commit });
 }
-/**
- * Builds out the release body to be used so it is formatted correctly
- * for github. It will have a link to compare the new version to the
- * previous version and also the most recent commit message that was
- * merged with the new release.
- *
- * @param currentVersion The current version on github.
- * @param newVersion The new version that should be created.
- * @param body The message to add to the releease.
- */
-function buildRelease(release) {
-    var today = new Date();
-    var dd = String(today.getDate()).padStart(2, '0');
-    var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-    var yyyy = today.getFullYear();
-    const todayString = yyyy + '-' + mm + '-' + dd;
-    let body = `### [${parseVersion(release.new)}]`;
-    body += `(https://github.com/${owner}/${repo}/compare/`;
-    body += `v${parseVersion(release.current)}...v${parseVersion(release.new)})`;
-    body += `(${todayString})\n`;
-    body += `### **Changes**\n* ${getCommitBody(release.commit)}`;
-    core.setOutput('body', body);
-    return (0, rxjs_1.of)(null);
-}
-/**
- * This will get the body of the commit. If there is no commit
- * body then it will just set a default release body.
- *
- * @param message The commit message to parse.
- * @returns The body message to add to to the release notes.
- */
-function getCommitBody(message) {
-    const regexEx = new RegExp('<(.*?)>(:.*)');
-    let result = regexEx.exec(message);
-    let bodyMesage = 'New Release';
-    if (result) {
-        bodyMesage = result[2].replace(': ', '');
-    }
-    else {
-        const regexEx = new RegExp('(:.*)');
-        result = regexEx.exec(message);
-        bodyMesage = result ? result[0].replace(':', '').trim() : message;
-    }
-    return bodyMesage;
-}
-/**
- * This will take the version and parse it into a readable
- * and formatted version string.
- *
- * @param version The version to format.
- * @returns The new formatted string.
- */
-function parseVersion(version) {
-    return `${version.major}.${version.minor}.${version.fix}`;
-}
+exports.GitHubService = GitHubService;
 
 
 /***/ }),
@@ -236,7 +230,8 @@ const github_1 = __nccwpck_require__(5928);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            (0, github_1.startRelease)().subscribe();
+            const githubService = new github_1.GitHubService();
+            githubService.startRelease().subscribe();
         }
         catch (error) {
             if (error instanceof Error)
@@ -249,25 +244,168 @@ run();
 
 /***/ }),
 
-/***/ 3017:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ 9379:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.convertPromise = void 0;
+exports.EnvironmentService = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github = __importStar(__nccwpck_require__(5438));
+const fs_1 = __importDefault(__nccwpck_require__(5747));
+const path_1 = __importDefault(__nccwpck_require__(5622));
+class EnvironmentService {
+    constructor() {
+        this.LOCAL_ENV_PATH = '../src/environment/environment.local.conf';
+    }
+    /**
+     * This will get the {@link GitHubAuth} object to be used to perform
+     * the action. It will go based on the environment that is currently
+     * be run.
+     *
+     * @returns A {@link GitHubAuth} object
+     */
+    getActiveEnvironment() {
+        const githubToken = core.getInput('github_token');
+        if (githubToken) {
+            console.log('Active Environment: PRODUCTION\n');
+            return { owner: this.getOwner(), repo: this.getRepo(), token: githubToken };
+        }
+        else if (fs_1.default.existsSync(this.getLocalEnvironmentFile())) {
+            console.log('Active Environment: LOCAL\n');
+            const dataArray = this.getConfigProperties();
+            return { owner: dataArray[0], repo: dataArray[1], token: dataArray[2] };
+        }
+        else {
+            core.setFailed("Could not determine environment. If local environment, please confirm a 'environment.local.conf' exists.");
+            return { owner: '', repo: '', token: '' };
+        }
+    }
+    /**
+     * Simply will get the owner of the repository.
+     *
+     * @returns A {@link String} of the owner.
+     */
+    getOwner() {
+        return github.context.repo.owner;
+    }
+    /**
+     * Simply will get the name of the repository.
+     *
+     * @returns A {@link String} of the repository name.
+     */
+    getRepo() {
+        return github.context.repo.repo;
+    }
+    /**
+     * Gets the needed config properties to perform the action from
+     * the local environment file.
+     *
+     * @returns A {@link String} array of the property values.
+     */
+    getConfigProperties() {
+        var array = fs_1.default
+            .readFileSync(this.getLocalEnvironmentFile())
+            .toString()
+            .split('\n')
+            .map(v => v.substring(v.indexOf('=') + 1).trim());
+        return array;
+    }
+    /**
+     * This will get the local environment path if one exits for the user.
+     *
+     * @returns A {@link String} of the local environemnt path.
+     */
+    getLocalEnvironmentFile() {
+        return path_1.default.resolve(__dirname, this.LOCAL_ENV_PATH);
+    }
+}
+exports.EnvironmentService = EnvironmentService;
+
+
+/***/ }),
+
+/***/ 9450:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RequestService = void 0;
+const github = __importStar(__nccwpck_require__(5438));
 const rxjs_1 = __nccwpck_require__(5805);
 /**
- * Method that will convert a promise into an observable. It
- * will keep the generic value tha was passed with the promise.
+ * Request service for making API calls.
  *
- * @param p The {@link Promise} to convert to an rxjs observable.
- * @returns an {@link Observable} of the generic type.
+ * @author Sam Butler
+ * @since May 1, 2022
  */
-function convertPromise(p) {
-    return (0, rxjs_1.from)(p);
+class RequestService {
+    /**
+     * This will perform a get request on the given url and the given options.
+     * It will then cast the promise into an {@link Observable} to be used.
+     *
+     * @param url The url to hit.
+     * @param options The options to send with it.
+     */
+    get(url, env) {
+        const octokit = github.getOctokit(env.token);
+        return this.convertPromise(octokit.request(`GET ${url}`, { owner: env.owner, repo: env.repo }));
+    }
+    /**
+     * Method that will convert a promise into an observable. It
+     * will keep the generic value tha was passed with the promise.
+     *
+     * @param p The {@link Promise} to convert to an rxjs observable.
+     * @returns an {@link Observable} of the generic type.
+     */
+    convertPromise(p) {
+        return (0, rxjs_1.from)(p);
+    }
 }
-exports.convertPromise = convertPromise;
+exports.RequestService = RequestService;
 
 
 /***/ }),

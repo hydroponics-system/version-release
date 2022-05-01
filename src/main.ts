@@ -1,9 +1,10 @@
 import * as core from '@actions/core'
-import {startRelease} from './github'
+import {GitHubService} from './github'
 
 async function run(): Promise<void> {
   try {
-    startRelease().subscribe()
+    const githubService = new GitHubService()
+    githubService.startRelease().subscribe()
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }

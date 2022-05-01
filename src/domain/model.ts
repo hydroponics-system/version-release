@@ -10,3 +10,9 @@ export interface Release {
   commit: string
   content?: string
 }
+
+export interface GitHubAuth {
+  repo: string
+  owner: string
+  token: string
+}
