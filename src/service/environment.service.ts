@@ -1,11 +1,11 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
-import fs from 'fs'
-import path from 'path'
-import {GitHubAuth} from '../domain/model'
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import fs from "fs";
+import path from "path";
+import { GitHubAuth } from "../domain/model";
 
 export class EnvironmentService {
-  LOCAL_ENV_PATH = '../src/environment/environment.local.conf'
+  LOCAL_ENV_PATH = "../src/environment/environment.local.conf";
 
   /**
    * This will get the {@link GitHubAuth} object to be used to perform
@@ -15,20 +15,24 @@ export class EnvironmentService {
    * @returns A {@link GitHubAuth} object
    */
   public getActiveEnvironment(): GitHubAuth {
-    const githubToken = core.getInput('github_token')
+    const githubToken = core.getInput("github_token");
 
     if (githubToken) {
-      console.log('Active Environment: PRODUCTION\n')
-      return {owner: this.getOwner(), repo: this.getRepo(), token: githubToken}
+      console.log("Active Environment: PRODUCTION\n");
+      return {
+        owner: this.getOwner(),
+        repo: this.getRepo(),
+        token: githubToken,
+      };
     } else if (fs.existsSync(this.getLocalEnvironmentFile())) {
-      console.log('Active Environment: LOCAL\n')
-      const dataArray = this.getConfigProperties()
-      return {owner: dataArray[0], repo: dataArray[1], token: dataArray[2]}
+      console.log("Active Environment: LOCAL\n");
+      const dataArray = this.getConfigProperties();
+      return { owner: dataArray[0], repo: dataArray[1], token: dataArray[2] };
     } else {
       core.setFailed(
         "Could not determine environment. If local environment, please confirm a 'environment.local.conf' exists."
-      )
-      return {owner: '', repo: '', token: ''}
+      );
+      return { owner: "", repo: "", token: "" };
     }
   }
 
@@ -38,7 +42,7 @@ export class EnvironmentService {
    * @returns A {@link String} of the owner.
    */
   public getOwner() {
-    return github.context.repo.owner
+    return github.context.repo.owner;
   }
 
   /**
@@ -47,7 +51,7 @@ export class EnvironmentService {
    * @returns A {@link String} of the repository name.
    */
   public getRepo() {
-    return github.context.repo.repo
+    return github.context.repo.repo;
   }
 
   /**
@@ -60,9 +64,9 @@ export class EnvironmentService {
     var array = fs
       .readFileSync(this.getLocalEnvironmentFile())
       .toString()
-      .split('\n')
-      .map(v => v.substring(v.indexOf('=') + 1).trim())
-    return array
+      .split("\n")
+      .map((v) => v.substring(v.indexOf("=") + 1).trim());
+    return array;
   }
 
   /**
@@ -71,6 +75,6 @@ export class EnvironmentService {
    * @returns A {@link String} of the local environemnt path.
    */
   public getLocalEnvironmentFile(): string {
-    return path.resolve(__dirname, this.LOCAL_ENV_PATH)
+    return path.resolve(__dirname, this.LOCAL_ENV_PATH);
   }
 }

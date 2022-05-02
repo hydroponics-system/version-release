@@ -1,6 +1,6 @@
-import * as github from '@actions/github'
-import {from, Observable} from 'rxjs'
-import {GitHubAuth} from '../domain/model'
+import * as github from "@actions/github";
+import { from, Observable } from "rxjs";
+import { GitHubAuth } from "../domain/model";
 
 /**
  * Request service for making API calls.
@@ -17,10 +17,10 @@ export class RequestService {
    * @param options The options to send with it.
    */
   public get(url: string, env: GitHubAuth) {
-    const octokit = github.getOctokit(env.token)
+    const octokit = github.getOctokit(env.token);
     return this.convertPromise(
-      octokit.request(`GET ${url}`, {owner: env.owner, repo: env.repo})
-    )
+      octokit.request(`GET ${url}`, { owner: env.owner, repo: env.repo })
+    );
   }
 
   /**
@@ -31,6 +31,6 @@ export class RequestService {
    * @returns an {@link Observable} of the generic type.
    */
   public convertPromise<T>(p: Promise<T>): Observable<T> {
-    return from(p)
+    return from(p);
   }
 }

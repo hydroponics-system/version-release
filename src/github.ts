@@ -1,9 +1,9 @@
-import * as core from '@actions/core'
-import {combineLatest, Observable, of} from 'rxjs'
-import {switchMap} from 'rxjs/operators'
-import {GitHubAuth, Release, Version} from './domain/model'
-import {EnvironmentService} from './service/environment.service'
-import {RequestService} from './service/request.service'
+import * as core from "@actions/core";
+import { combineLatest, Observable, of } from "rxjs";
+import { switchMap } from "rxjs/operators";
+import { GitHubAuth, Release, Version } from "./domain/model";
+import { EnvironmentService } from "./service/environment.service";
+import { RequestService } from "./service/request.service";
 
 /**
  * Github service for handling all functionality with github actions.
@@ -12,18 +12,18 @@ import {RequestService} from './service/request.service'
  * @since May 1, 2022
  */
 export class GitHubService {
-  requestService = new RequestService()
-  environmentService = new EnvironmentService()
+  requestService = new RequestService();
+  environmentService = new EnvironmentService();
 
-  ACTIVE_ENVIRONMENT: GitHubAuth = {owner: '', repo: '', token: ''}
-  BUMP_TYPE = 'patch'
+  ACTIVE_ENVIRONMENT: GitHubAuth = { owner: "", repo: "", token: "" };
+  BUMP_TYPE = "patch";
 
   public startRelease() {
-    this.ACTIVE_ENVIRONMENT = this.environmentService.getActiveEnvironment()
+    this.ACTIVE_ENVIRONMENT = this.environmentService.getActiveEnvironment();
     return combineLatest([this.getLatestTag(), this.getLatestCommit()]).pipe(
       switchMap(([v, c]) => this.bumpVersion(v, c)),
-      switchMap(res => this.buildRelease(res))
-    )
+      switchMap((res) => this.buildRelease(res))
+    );
   }
 
   /**
@@ -32,10 +32,10 @@ export class GitHubService {
    * @returns an {@link Observable} of type {@link Version}
    */
   private getLatestTag(): Observable<Version> {
-    console.log('Getting latest tags...')
+    console.log("Getting latest tags...");
     return this.requestService
-      .get('/repos/{owner}/{repo}/tags', this.ACTIVE_ENVIRONMENT)
-      .pipe(switchMap(res => this.parseTagsToLatest(res)))
+      .get("/repos/{owner}/{repo}/tags", this.ACTIVE_ENVIRONMENT)
+      .pipe(switchMap((res) => this.parseTagsToLatest(res)));
   }
 
   /**
@@ -47,19 +47,19 @@ export class GitHubService {
    * @returns an {@link Observable} of the latest {@link Version}
    */
   private parseTagsToLatest(tags: any): Observable<Version> {
-    const regexEx = new RegExp('^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$')
-    const result = regexEx.exec(tags.data[0].name)
+    const regexEx = new RegExp("^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
+    const result = regexEx.exec(tags.data[0].name);
 
     if (result) {
       const v: Version = {
         major: parseInt(result[1]),
         minor: parseInt(result[2]),
-        fix: parseInt(result[3])
-      }
-      console.log(`Latest tag found: 'v${this.parseVersion(v)}'`)
-      return of(v)
+        fix: parseInt(result[3]),
+      };
+      console.log(`Latest tag found: 'v${this.parseVersion(v)}'`);
+      return of(v);
     } else {
-      return of({major: 0, minor: 0, fix: 0})
+      return of({ major: 0, minor: 0, fix: 0 });
     }
   }
 
@@ -71,18 +71,18 @@ export class GitHubService {
    * add a link to the diff from the previous version.
    */
   private getLatestCommit(): Observable<string> {
-    console.log('Getting latest commit message...')
+    console.log("Getting latest commit message...");
     return this.requestService
-      .get('/repos/{owner}/{repo}/commits', this.ACTIVE_ENVIRONMENT)
+      .get("/repos/{owner}/{repo}/commits", this.ACTIVE_ENVIRONMENT)
       .pipe(
-        switchMap(res => {
-          console.log(`Latest Commit: '${res.data[0].commit.message}'`)
-          const regexEx = new RegExp('<(.*?)>(:.*)')
-          let result = regexEx.exec(res.data[0].commit.message)
-          this.BUMP_TYPE = result ? result[1] : 'patch'
-          return of(res.data[0].commit.message)
+        switchMap((res) => {
+          console.log(`Latest Commit: '${res.data[0].commit.message}'`);
+          const regexEx = new RegExp("<(.*?)>(:.*)");
+          let result = regexEx.exec(res.data[0].commit.message);
+          this.BUMP_TYPE = result ? result[1] : "patch";
+          return of(res.data[0].commit.message);
         })
-      )
+      );
   }
 
   /**
@@ -93,26 +93,26 @@ export class GitHubService {
    * @param message The commit message to parse.
    */
   private bumpVersion(current: Version, commit: string): Observable<Release> {
-    const newVersion: Version = {...current}
+    const newVersion: Version = { ...current };
 
-    if (this.BUMP_TYPE === 'major') {
-      newVersion.major = newVersion.major + 1
-      newVersion.minor = 0
-      newVersion.fix = 0
-    } else if (this.BUMP_TYPE === 'minor') {
-      newVersion.minor = newVersion.minor + 1
-      newVersion.fix = 0
+    if (this.BUMP_TYPE === "major") {
+      newVersion.major = newVersion.major + 1;
+      newVersion.minor = 0;
+      newVersion.fix = 0;
+    } else if (this.BUMP_TYPE === "minor") {
+      newVersion.minor = newVersion.minor + 1;
+      newVersion.fix = 0;
     } else {
-      newVersion.fix = newVersion.fix + 1
+      newVersion.fix = newVersion.fix + 1;
     }
 
     console.log(
       `New Version: ${this.BUMP_TYPE} -> 'v${this.parseVersion(newVersion)}'\n`
-    )
+    );
 
-    core.setOutput('tag', `v${this.parseVersion(newVersion)}`)
-    core.setOutput('release_name', `Release v${this.parseVersion(newVersion)}`)
-    return of({current: current, new: newVersion, commit: commit})
+    core.setOutput("tag", `v${this.parseVersion(newVersion)}`);
+    core.setOutput("release_name", `Release v${this.parseVersion(newVersion)}`);
+    return of({ current: current, new: newVersion, commit: commit });
   }
 
   /**
@@ -126,21 +126,21 @@ export class GitHubService {
    * @param body The message to add to the releease.
    */
   private buildRelease(r: Release): Observable<any> {
-    var today = new Date()
-    var dd = String(today.getDate()).padStart(2, '0')
-    var mm = String(today.getMonth() + 1).padStart(2, '0') //January is 0!
-    var yyyy = today.getFullYear()
+    var today = new Date();
+    var dd = String(today.getDate()).padStart(2, "0");
+    var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+    var yyyy = today.getFullYear();
 
-    const todayString = yyyy + '-' + mm + '-' + dd
-    let body = `### [${this.parseVersion(r.new)}]`
-    body += `(https://github.com/${this.ACTIVE_ENVIRONMENT.owner}/${this.ACTIVE_ENVIRONMENT.repo}/compare/`
-    body += `v${this.parseVersion(r.current)}...v${this.parseVersion(r.new)})`
-    body += `(${todayString})\n`
+    const todayString = yyyy + "-" + mm + "-" + dd;
+    let body = `### [${this.parseVersion(r.new)}]`;
+    body += `(https://github.com/${this.ACTIVE_ENVIRONMENT.owner}/${this.ACTIVE_ENVIRONMENT.repo}/compare/`;
+    body += `v${this.parseVersion(r.current)}...v${this.parseVersion(r.new)})`;
+    body += `(${todayString})\n`;
 
-    body += `### **Changes**\n* ${this.getCommitBody(r.commit)}`
-    console.log('Release Content: \n' + body)
-    core.setOutput('body', body)
-    return of(null)
+    body += `### **Changes**\n* ${this.getCommitBody(r.commit)}`;
+    console.log("Release Content: \n" + body);
+    core.setOutput("body", body);
+    return of(null);
   }
 
   /**
@@ -151,18 +151,18 @@ export class GitHubService {
    * @returns The body message to add to to the release notes.
    */
   private getCommitBody(message: string) {
-    const regexEx = new RegExp('<(.*?)>(:.*)')
-    let result = regexEx.exec(message)
-    let bodyMesage = 'New Release'
+    const regexEx = new RegExp("<(.*?)>(:.*)");
+    let result = regexEx.exec(message);
+    let bodyMesage = "New Release";
 
     if (result) {
-      bodyMesage = result[2].replace(': ', '')
+      bodyMesage = result[2].replace(": ", "");
     } else {
-      const regexEx = new RegExp('(:.*)')
-      result = regexEx.exec(message)
-      bodyMesage = result ? result[0].replace(':', '').trim() : message
+      const regexEx = new RegExp("(:.*)");
+      result = regexEx.exec(message);
+      bodyMesage = result ? result[0].replace(":", "").trim() : message;
     }
-    return bodyMesage
+    return bodyMesage;
   }
 
   /**
@@ -173,6 +173,6 @@ export class GitHubService {
    * @returns The new formatted string.
    */
   private parseVersion(version: Version) {
-    return `${version.major}.${version.minor}.${version.fix}`
+    return `${version.major}.${version.minor}.${version.fix}`;
   }
 }

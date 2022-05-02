@@ -42,12 +42,12 @@ class GitHubService {
     constructor() {
         this.requestService = new request_service_1.RequestService();
         this.environmentService = new environment_service_1.EnvironmentService();
-        this.ACTIVE_ENVIRONMENT = { owner: '', repo: '', token: '' };
-        this.BUMP_TYPE = 'patch';
+        this.ACTIVE_ENVIRONMENT = { owner: "", repo: "", token: "" };
+        this.BUMP_TYPE = "patch";
     }
     startRelease() {
         this.ACTIVE_ENVIRONMENT = this.environmentService.getActiveEnvironment();
-        return (0, rxjs_1.combineLatest)([this.getLatestTag(), this.getLatestCommit()]).pipe((0, operators_1.switchMap)(([v, c]) => this.bumpVersion(v, c)), (0, operators_1.switchMap)(res => this.buildRelease(res)));
+        return (0, rxjs_1.combineLatest)([this.getLatestTag(), this.getLatestCommit()]).pipe((0, operators_1.switchMap)(([v, c]) => this.bumpVersion(v, c)), (0, operators_1.switchMap)((res) => this.buildRelease(res)));
     }
     /**
      * Async function to get all the tags from the repository.
@@ -55,10 +55,10 @@ class GitHubService {
      * @returns an {@link Observable} of type {@link Version}
      */
     getLatestTag() {
-        console.log('Getting latest tags...');
+        console.log("Getting latest tags...");
         return this.requestService
-            .get('/repos/{owner}/{repo}/tags', this.ACTIVE_ENVIRONMENT)
-            .pipe((0, operators_1.switchMap)(res => this.parseTagsToLatest(res)));
+            .get("/repos/{owner}/{repo}/tags", this.ACTIVE_ENVIRONMENT)
+            .pipe((0, operators_1.switchMap)((res) => this.parseTagsToLatest(res)));
     }
     /**
      * This will parse the tags and get the latest tag that is on the
@@ -69,13 +69,13 @@ class GitHubService {
      * @returns an {@link Observable} of the latest {@link Version}
      */
     parseTagsToLatest(tags) {
-        const regexEx = new RegExp('^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$');
+        const regexEx = new RegExp("^v(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
         const result = regexEx.exec(tags.data[0].name);
         if (result) {
             const v = {
                 major: parseInt(result[1]),
                 minor: parseInt(result[2]),
-                fix: parseInt(result[3])
+                fix: parseInt(result[3]),
             };
             console.log(`Latest tag found: 'v${this.parseVersion(v)}'`);
             return (0, rxjs_1.of)(v);
@@ -92,14 +92,14 @@ class GitHubService {
      * add a link to the diff from the previous version.
      */
     getLatestCommit() {
-        console.log('Getting latest commit message...');
+        console.log("Getting latest commit message...");
         return this.requestService
-            .get('/repos/{owner}/{repo}/commits', this.ACTIVE_ENVIRONMENT)
-            .pipe((0, operators_1.switchMap)(res => {
+            .get("/repos/{owner}/{repo}/commits", this.ACTIVE_ENVIRONMENT)
+            .pipe((0, operators_1.switchMap)((res) => {
             console.log(`Latest Commit: '${res.data[0].commit.message}'`);
-            const regexEx = new RegExp('<(.*?)>(:.*)');
+            const regexEx = new RegExp("<(.*?)>(:.*)");
             let result = regexEx.exec(res.data[0].commit.message);
-            this.BUMP_TYPE = result ? result[1] : 'patch';
+            this.BUMP_TYPE = result ? result[1] : "patch";
             return (0, rxjs_1.of)(res.data[0].commit.message);
         }));
     }
@@ -112,12 +112,12 @@ class GitHubService {
      */
     bumpVersion(current, commit) {
         const newVersion = Object.assign({}, current);
-        if (this.BUMP_TYPE === 'major') {
+        if (this.BUMP_TYPE === "major") {
             newVersion.major = newVersion.major + 1;
             newVersion.minor = 0;
             newVersion.fix = 0;
         }
-        else if (this.BUMP_TYPE === 'minor') {
+        else if (this.BUMP_TYPE === "minor") {
             newVersion.minor = newVersion.minor + 1;
             newVersion.fix = 0;
         }
@@ -125,8 +125,8 @@ class GitHubService {
             newVersion.fix = newVersion.fix + 1;
         }
         console.log(`New Version: ${this.BUMP_TYPE} -> 'v${this.parseVersion(newVersion)}'\n`);
-        core.setOutput('tag', `v${this.parseVersion(newVersion)}`);
-        core.setOutput('release_name', `Release v${this.parseVersion(newVersion)}`);
+        core.setOutput("tag", `v${this.parseVersion(newVersion)}`);
+        core.setOutput("release_name", `Release v${this.parseVersion(newVersion)}`);
         return (0, rxjs_1.of)({ current: current, new: newVersion, commit: commit });
     }
     /**
@@ -141,17 +141,17 @@ class GitHubService {
      */
     buildRelease(r) {
         var today = new Date();
-        var dd = String(today.getDate()).padStart(2, '0');
-        var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var dd = String(today.getDate()).padStart(2, "0");
+        var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
         var yyyy = today.getFullYear();
-        const todayString = yyyy + '-' + mm + '-' + dd;
+        const todayString = yyyy + "-" + mm + "-" + dd;
         let body = `### [${this.parseVersion(r.new)}]`;
         body += `(https://github.com/${this.ACTIVE_ENVIRONMENT.owner}/${this.ACTIVE_ENVIRONMENT.repo}/compare/`;
         body += `v${this.parseVersion(r.current)}...v${this.parseVersion(r.new)})`;
         body += `(${todayString})\n`;
         body += `### **Changes**\n* ${this.getCommitBody(r.commit)}`;
-        console.log('Release Content: \n' + body);
-        core.setOutput('body', body);
+        console.log("Release Content: \n" + body);
+        core.setOutput("body", body);
         return (0, rxjs_1.of)(null);
     }
     /**
@@ -162,16 +162,16 @@ class GitHubService {
      * @returns The body message to add to to the release notes.
      */
     getCommitBody(message) {
-        const regexEx = new RegExp('<(.*?)>(:.*)');
+        const regexEx = new RegExp("<(.*?)>(:.*)");
         let result = regexEx.exec(message);
-        let bodyMesage = 'New Release';
+        let bodyMesage = "New Release";
         if (result) {
-            bodyMesage = result[2].replace(': ', '');
+            bodyMesage = result[2].replace(": ", "");
         }
         else {
-            const regexEx = new RegExp('(:.*)');
+            const regexEx = new RegExp("(:.*)");
             result = regexEx.exec(message);
-            bodyMesage = result ? result[0].replace(':', '').trim() : message;
+            bodyMesage = result ? result[0].replace(":", "").trim() : message;
         }
         return bodyMesage;
     }
@@ -279,7 +279,7 @@ const fs_1 = __importDefault(__nccwpck_require__(5747));
 const path_1 = __importDefault(__nccwpck_require__(5622));
 class EnvironmentService {
     constructor() {
-        this.LOCAL_ENV_PATH = '../src/environment/environment.local.conf';
+        this.LOCAL_ENV_PATH = "../src/environment/environment.local.conf";
     }
     /**
      * This will get the {@link GitHubAuth} object to be used to perform
@@ -289,19 +289,23 @@ class EnvironmentService {
      * @returns A {@link GitHubAuth} object
      */
     getActiveEnvironment() {
-        const githubToken = core.getInput('github_token');
+        const githubToken = core.getInput("github_token");
         if (githubToken) {
-            console.log('Active Environment: PRODUCTION\n');
-            return { owner: this.getOwner(), repo: this.getRepo(), token: githubToken };
+            console.log("Active Environment: PRODUCTION\n");
+            return {
+                owner: this.getOwner(),
+                repo: this.getRepo(),
+                token: githubToken,
+            };
         }
         else if (fs_1.default.existsSync(this.getLocalEnvironmentFile())) {
-            console.log('Active Environment: LOCAL\n');
+            console.log("Active Environment: LOCAL\n");
             const dataArray = this.getConfigProperties();
             return { owner: dataArray[0], repo: dataArray[1], token: dataArray[2] };
         }
         else {
             core.setFailed("Could not determine environment. If local environment, please confirm a 'environment.local.conf' exists.");
-            return { owner: '', repo: '', token: '' };
+            return { owner: "", repo: "", token: "" };
         }
     }
     /**
@@ -330,8 +334,8 @@ class EnvironmentService {
         var array = fs_1.default
             .readFileSync(this.getLocalEnvironmentFile())
             .toString()
-            .split('\n')
-            .map(v => v.substring(v.indexOf('=') + 1).trim());
+            .split("\n")
+            .map((v) => v.substring(v.indexOf("=") + 1).trim());
         return array;
     }
     /**
