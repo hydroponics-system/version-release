@@ -118,8 +118,8 @@ class GitHubService {
             const result = regexEx.exec(versionInput);
             if (result) {
                 newVersion.major = parseInt(result[1]);
-                newVersion.minor = parseInt(result[1]);
-                newVersion.fix = parseInt(result[1]);
+                newVersion.minor = parseInt(result[2]);
+                newVersion.fix = parseInt(result[3]);
             }
             console.log(`Custom Version Release: ${this.parseVersion(newVersion)}`);
         }
