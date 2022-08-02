@@ -5,6 +5,9 @@ inputs:
   github_token: # The github token
     required: true
     description: 'The users github token'
+  version:
+    required: false
+    description: 'Optional Override of version'
 outputs:
   tag: # tag of output
     description: 'The tag name to be created'

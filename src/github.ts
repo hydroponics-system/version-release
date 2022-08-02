@@ -95,15 +95,27 @@ export class GitHubService {
   private bumpVersion(current: Version, commit: string): Observable<Release> {
     const newVersion: Version = { ...current };
 
-    if (this.BUMP_TYPE === "major") {
-      newVersion.major = newVersion.major + 1;
-      newVersion.minor = 0;
-      newVersion.fix = 0;
-    } else if (this.BUMP_TYPE === "minor") {
-      newVersion.minor = newVersion.minor + 1;
-      newVersion.fix = 0;
+    const versionInput = this.environmentService.getVersionInput();
+    if (versionInput) {
+      const regexEx = new RegExp("(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
+      const result = regexEx.exec(versionInput);
+
+      if (result) {
+        newVersion.major = parseInt(result[1]);
+        newVersion.minor = parseInt(result[1]);
+        newVersion.fix = parseInt(result[1]);
+      }
     } else {
-      newVersion.fix = newVersion.fix + 1;
+      if (this.BUMP_TYPE === "major") {
+        newVersion.major = newVersion.major + 1;
+        newVersion.minor = 0;
+        newVersion.fix = 0;
+      } else if (this.BUMP_TYPE === "minor") {
+        newVersion.minor = newVersion.minor + 1;
+        newVersion.fix = 0;
+      } else {
+        newVersion.fix = newVersion.fix + 1;
+      }
     }
 
     console.log(

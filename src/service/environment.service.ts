@@ -36,6 +36,11 @@ export class EnvironmentService {
     }
   }
 
+  public getVersionInput() {
+    const version = core.getInput("version");
+    return version ? version : null;
+  }
+
   /**
    * Simply will get the owner of the repository.
    *
