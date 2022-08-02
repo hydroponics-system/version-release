@@ -112,17 +112,29 @@ class GitHubService {
      */
     bumpVersion(current, commit) {
         const newVersion = Object.assign({}, current);
-        if (this.BUMP_TYPE === "major") {
-            newVersion.major = newVersion.major + 1;
-            newVersion.minor = 0;
-            newVersion.fix = 0;
-        }
-        else if (this.BUMP_TYPE === "minor") {
-            newVersion.minor = newVersion.minor + 1;
-            newVersion.fix = 0;
+        const versionInput = this.environmentService.getVersionInput();
+        if (versionInput) {
+            const regexEx = new RegExp("(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
+            const result = regexEx.exec(versionInput);
+            if (result) {
+                newVersion.major = parseInt(result[1]);
+                newVersion.minor = parseInt(result[1]);
+                newVersion.fix = parseInt(result[1]);
+            }
         }
         else {
-            newVersion.fix = newVersion.fix + 1;
+            if (this.BUMP_TYPE === "major") {
+                newVersion.major = newVersion.major + 1;
+                newVersion.minor = 0;
+                newVersion.fix = 0;
+            }
+            else if (this.BUMP_TYPE === "minor") {
+                newVersion.minor = newVersion.minor + 1;
+                newVersion.fix = 0;
+            }
+            else {
+                newVersion.fix = newVersion.fix + 1;
+            }
         }
         console.log(`New Version: ${this.BUMP_TYPE} -> 'v${this.parseVersion(newVersion)}'\n`);
         core.setOutput("tag", `v${this.parseVersion(newVersion)}`);
@@ -307,6 +319,10 @@ class EnvironmentService {
             core.setFailed("Could not determine environment. If local environment, please confirm a 'environment.local.conf' exists.");
             return { owner: "", repo: "", token: "" };
         }
+    }
+    getVersionInput() {
+        const version = core.getInput("version");
+        return version ? version : null;
     }
     /**
      * Simply will get the owner of the repository.
