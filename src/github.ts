@@ -97,6 +97,7 @@ export class GitHubService {
 
     const versionInput = this.environmentService.getVersionInput();
     if (versionInput) {
+      console.log(`Custom Version Release: ${versionInput}`);
       const regexEx = new RegExp("(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
       const result = regexEx.exec(versionInput);
 
