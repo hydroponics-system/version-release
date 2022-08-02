@@ -114,7 +114,6 @@ class GitHubService {
         const newVersion = Object.assign({}, current);
         const versionInput = this.environmentService.getVersionInput();
         if (versionInput) {
-            console.log(`Custom Version Release: ${versionInput}`);
             const regexEx = new RegExp("(?:(\\d+).)?(?:(\\d+).)?(\\*|\\d+)$");
             const result = regexEx.exec(versionInput);
             if (result) {
@@ -122,6 +121,7 @@ class GitHubService {
                 newVersion.minor = parseInt(result[1]);
                 newVersion.fix = parseInt(result[1]);
             }
+            console.log(`Custom Version Release: ${this.parseVersion(newVersion)}`);
         }
         else {
             if (this.BUMP_TYPE === "major") {
@@ -136,6 +136,7 @@ class GitHubService {
             else {
                 newVersion.fix = newVersion.fix + 1;
             }
+            console.log(`Version Bump Release: ${this.parseVersion(newVersion)}`);
         }
         console.log(`New Version: ${this.BUMP_TYPE} -> 'v${this.parseVersion(newVersion)}'\n`);
         core.setOutput("tag", `v${this.parseVersion(newVersion)}`);
